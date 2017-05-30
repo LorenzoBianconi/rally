@@ -12,8 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import fixtures
 import mock
-from oslotest import mockpatch
 
 from rally.plugins.openstack import scenario as base_scenario
 from tests.unit import test
@@ -22,8 +22,7 @@ from tests.unit import test
 class OpenStackScenarioTestCase(test.TestCase):
     def setUp(self):
         super(OpenStackScenarioTestCase, self).setUp()
-        self.osclients = mockpatch.Patch(
-            "rally.osclients.Clients")
+        self.osclients = fixtures.MockPatch("rally.osclients.Clients")
         self.useFixture(self.osclients)
         self.context = test.get_test_context()
         self.context.update({"foo": "bar"})
