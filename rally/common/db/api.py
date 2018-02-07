@@ -48,8 +48,7 @@ from oslo_db import options as db_options
 CONF = cfg.CONF
 
 
-db_options.set_defaults(CONF, connection="sqlite:////tmp/rally.sqlite",
-                        sqlite_db="rally.sqlite")
+db_options.set_defaults(CONF, connection="sqlite:////tmp/rally.sqlite")
 
 
 IMPL = None
