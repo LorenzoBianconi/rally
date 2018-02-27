@@ -17,9 +17,9 @@
 
 import textwrap
 
+import fixtures
 import jsonschema
 import mock
-from oslotest import mockpatch
 
 from rally.deployment.serverprovider.providers import openstack as provider
 from rally import exceptions
@@ -43,7 +43,7 @@ class OpenStackProviderTestCase(test.TestCase):
 
     def setUp(self):
         super(OpenStackProviderTestCase, self).setUp()
-        self.useFixture(mockpatch.Patch(
+        self.useFixture(fixtures.MockPatch(
             "rally.deployment.serverprovider.provider.ResourceManager"))
 
     def _get_valid_config(self):

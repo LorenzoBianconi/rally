@@ -15,10 +15,10 @@
 
 import os
 
+import fixtures
 import jsonschema
 import mock
 import netaddr
-from oslotest import mockpatch
 
 from rally.deployment.serverprovider.providers import virsh
 from tests.unit import test
@@ -36,7 +36,7 @@ class VirshProviderTestCase(test.TestCase):
             "template_password": "password",
         }
         self.provider = virsh.VirshProvider(self.deployment, self.config)
-        self.useFixture(mockpatch.PatchObject(self.provider, "resources"))
+        self.useFixture(fixtures.MockPatchObject(self.provider, "resources"))
 
     @mock.patch(
         "rally.deployment.serverprovider.providers.virsh.netaddr.IPAddress")
