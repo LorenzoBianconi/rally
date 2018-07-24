@@ -33,52 +33,56 @@ class PercentileTime(sla.SLA):
         "$schema": consts.JSON_SCHEMA,
         "properties": {
             "min_iterations": {"type": "integer", "minimum": 3},
-            "p0": {"type": "number", "minimum": 0.0, "maximum": 1.0},
-            "th0": {"type": "number", "minimum": 0.0},
-            "p1": {"type": "number", "minimum": 0.0, "maximum": 1.0},
-            "th1": {"type": "number", "minimum": 0.0},
-            "p2": {"type": "number", "minimum": 0.0, "maximum": 1.0},
-            "th2": {"type": "number", "minimum": 0.0}
+            "duration_distribution": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "percentile": {"type": "number", "minimum": 0.0, "maximum": 1.0},
+                        "threshold": {"type": "number", "minimum": 0.0}
+                    }
+                }
+            }
         }
     }
 
     def __init__(self, criterion_value):
         super(PercentileTime, self).__init__(criterion_value)
+
         self.min_iterations = self.criterion_value.get("min_iterations", 3)
         self.iterations = 0
 
-        self.p0 = self.criterion_value.get("p0", 0.9)
-        self.th0 = self.criterion_value.get("th0", 0.0)
-        self.p0_comp = streaming_algorithms.PercentileComputation(self.p0, 1000)
-        self.p1 = self.criterion_value.get("p1", 0.9)
-        self.th1 = self.criterion_value.get("th1", 0.0)
-        self.p1_comp = streaming_algorithms.PercentileComputation(self.p1, 1000)
-        self.p2 = self.criterion_value.get("p2", 0.9)
-        self.th2 = self.criterion_value.get("th2", 0.0)
-        self.p2_comp = streaming_algorithms.PercentileComputation(self.p2, 1000)
+        self.p_comp_list = []
+        self.dur_distribution = self.criterion_value.get("duration_distribution")
+        for item in self.dur_distribution:
+            percentile = item.get("percentile", 0.9)
+            p_comp = streaming_algorithms.PercentileComputation(percentile, 10000)
+            self.p_comp_list.append(p_comp)
 
     def add_iteration(self, iteration):
         if not iteration["error"]:
             self.iterations += 1
+            if self.iterations < self.min_iterations:
+                return self.success
 
-            if self.iterations >= self.min_iterations:
-                self.p0_comp.add(iteration["duration"])
-                self.p1_comp.add(iteration["duration"])
-                self.p2_comp.add(iteration["duration"])
-
-                if self.th0:
-                    self.success = self.p0_comp.result() <= self.th0
-                if self.success and self.th1:
-                    self.success = self.p1_comp.result() <= self.th1
-                if self.success and self.th2:
-                    self.success = self.p2_comp.result() <= self.th2
+            for index in range(0, len(self.p_comp_list)):
+                threshold = self.dur_distribution[index].get("threshold", 1)
+                self.p_comp_list[index].add(iteration["duration"])
+                self.success = self.p_comp_list[index].result() <= threshold
+                if not self.success:
+                    break
         return self.success
 
     def merge(self, other):
         return self.success
 
     def details(self):
-        return (_("P0 (%.2f) %.3f <= %.3f P1 (%.2f) %.3f <= %.3f P2 (%.2f) %.3f <= %.3f") %
-                 (self.p0, self.p0_comp.result(), self.th0,
-                 self.p1, self.p1_comp.result(), self.th1,
-                 self.p2, self.p2_comp.result(), self.th2))
+        output = ""
+
+        for index in range(0, len(self.p_comp_list)):
+            percentile = self.dur_distribution[index].get("percentile", 0.9)
+            threshold = self.dur_distribution[index].get("threshold", 1)
+            result = self.p_comp_list[index].result()
+
+            output += "P(%.2f) %.3f <= %.3f " % (percentile, result, threshold)
+        return output
